@@ -23,8 +23,7 @@
         "y": 480,
         "wires": [
             [
-                "067f1fee6280b826",
-                "ffcb4f55c843f498"
+                "067f1fee6280b826"
             ]
         ]
     },
@@ -54,10 +53,10 @@
         "sep": ",",
         "hdrin": true,
         "hdrout": "none",
-        "multi": "one",
+        "multi": "mult",
         "ret": "\\n",
         "temp": "",
-        "skip": "7",
+        "skip": "8",
         "strings": true,
         "include_empty_strings": "",
         "include_null_values": "",
@@ -65,7 +64,7 @@
         "y": 580,
         "wires": [
             [
-                "ffcb4f55c843f498"
+                "40308bfaa82c4356"
             ]
         ]
     },
@@ -135,8 +134,7 @@
             [
                 "3a096c66f275b647"
             ]
-        ],
-        "info": "The delay of 1 second is so the Python program\nhas time to actually create the new log file\nbefore Node Red tries to reach for it."
+        ]
     },
     {
         "id": "1357f5b8874b99a6",
@@ -162,17 +160,18 @@
         "type": "function",
         "z": "620e0253fa335e5b",
         "name": "parse for chart",
-        "func": "\nreturn msg;",
+        "func": "var payload = msg.payload;\nvar series = []\nvar data=[];\n\nfor(let i=0;i<payload.length;i++)\n{\n    series.push(payload[i][\"ID\"])\n    data.push([payload[i][\"Time\"]])\n}\n\n\nmsg.payload=[{\n    \"series\": series,\n    \"data\": data,\n    \"labels\": [\"Time as Master\"]\n}];\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 200,
-        "y": 700,
+        "x": 160,
+        "y": 680,
         "wires": [
             [
-                "e395cd0ba6f9e0e9"
+                "e395cd0ba6f9e0e9",
+                "ffcb4f55c843f498"
             ]
         ]
     },
@@ -180,15 +179,14 @@
         "id": "e395cd0ba6f9e0e9",
         "type": "ui_chart",
         "z": "620e0253fa335e5b",
-        "d": true,
         "name": "",
-        "group": "",
+        "group": "dd0b9e80a464f19e",
         "order": 0,
         "width": 0,
         "height": 0,
-        "label": "chart",
-        "chartType": "line",
-        "legend": "false",
+        "label": "Bar Chart",
+        "chartType": "bar",
+        "legend": "true",
         "xformat": "HH:mm:ss",
         "interpolate": "linear",
         "nodata": "",
@@ -215,10 +213,29 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 230,
+        "x": 240,
         "y": 800,
         "wires": [
             []
         ]
+    },
+    {
+        "id": "dd0b9e80a464f19e",
+        "type": "ui_group",
+        "name": "Charts",
+        "tab": "dd824878cc0a8d12",
+        "order": 1,
+        "disp": false,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "dd824878cc0a8d12",
+        "type": "ui_tab",
+        "name": "Bar Chart",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
     }
 ]
