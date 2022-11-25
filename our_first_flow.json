@@ -1,0 +1,224 @@
+[
+    {
+        "id": "620e0253fa335e5b",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "3a096c66f275b647",
+        "type": "file in",
+        "z": "620e0253fa335e5b",
+        "name": "read log file",
+        "filename": "/home/pi/mu_code/logdummy",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 110,
+        "y": 480,
+        "wires": [
+            [
+                "067f1fee6280b826",
+                "ffcb4f55c843f498"
+            ]
+        ]
+    },
+    {
+        "id": "45f99ac357c09e10",
+        "type": "rpi-gpio in",
+        "z": "620e0253fa335e5b",
+        "name": "Button Pressed",
+        "pin": "2",
+        "intype": "down",
+        "debounce": "25",
+        "read": false,
+        "bcm": true,
+        "x": 120,
+        "y": 100,
+        "wires": [
+            [
+                "1357f5b8874b99a6"
+            ]
+        ]
+    },
+    {
+        "id": "067f1fee6280b826",
+        "type": "csv",
+        "z": "620e0253fa335e5b",
+        "name": "CSV to json Bar Plot",
+        "sep": ",",
+        "hdrin": true,
+        "hdrout": "none",
+        "multi": "one",
+        "ret": "\\n",
+        "temp": "",
+        "skip": "7",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 140,
+        "y": 580,
+        "wires": [
+            [
+                "ffcb4f55c843f498"
+            ]
+        ]
+    },
+    {
+        "id": "ffcb4f55c843f498",
+        "type": "debug",
+        "z": "620e0253fa335e5b",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 320,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "ee688ad3263f485b",
+        "type": "delay",
+        "z": "620e0253fa335e5b",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": true,
+        "allowrate": true,
+        "outputs": 1,
+        "x": 130,
+        "y": 360,
+        "wires": [
+            [
+                "5e49b4a00181cb15"
+            ]
+        ],
+        "info": "This is here because a button press sends 2\nsignals/messages.\n\nThis node let's us ignore one of them so the\nrest of the flow carries on with 1 message."
+    },
+    {
+        "id": "5e49b4a00181cb15",
+        "type": "delay",
+        "z": "620e0253fa335e5b",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 120,
+        "y": 420,
+        "wires": [
+            [
+                "3a096c66f275b647"
+            ]
+        ],
+        "info": "The delay of 1 second is so the Python program\nhas time to actually create the new log file\nbefore Node Red tries to reach for it."
+    },
+    {
+        "id": "1357f5b8874b99a6",
+        "type": "function",
+        "z": "620e0253fa335e5b",
+        "name": "skip first button press",
+        "func": "// inititalize counter to 0 if it doesn't exist already\nvar button_count = context.get('button_count')||0;\n//if (msg.payload == 1 || msg.payload == 0) {\nbutton_count += 1;\n//}\n// save value of count for rest of program\ncontext.set('button_count',button_count)\n// make it a part of the outgoing message object\nmsg.button_count = button_count;\nmsg.payload = button_count;\nif (button_count > 2){\n    return msg;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 140,
+        "y": 220,
+        "wires": [
+            [
+                "ee688ad3263f485b"
+            ]
+        ]
+    },
+    {
+        "id": "40308bfaa82c4356",
+        "type": "function",
+        "z": "620e0253fa335e5b",
+        "name": "parse for chart",
+        "func": "\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 200,
+        "y": 700,
+        "wires": [
+            [
+                "e395cd0ba6f9e0e9"
+            ]
+        ]
+    },
+    {
+        "id": "e395cd0ba6f9e0e9",
+        "type": "ui_chart",
+        "z": "620e0253fa335e5b",
+        "d": true,
+        "name": "",
+        "group": "",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 230,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    }
+]
