@@ -12,36 +12,18 @@
         "type": "file in",
         "z": "620e0253fa335e5b",
         "name": "read log file",
-        "filename": "/home/pi/mu_code/logdummy",
-        "filenameType": "str",
+        "filename": "$split(msg.file,\"_\")[0] = \"logFile\" ? msg.payload : null",
+        "filenameType": "jsonata",
         "format": "utf8",
         "chunk": false,
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 110,
-        "y": 480,
+        "x": 290,
+        "y": 420,
         "wires": [
             [
                 "067f1fee6280b826"
-            ]
-        ]
-    },
-    {
-        "id": "45f99ac357c09e10",
-        "type": "rpi-gpio in",
-        "z": "620e0253fa335e5b",
-        "name": "Button Pressed",
-        "pin": "2",
-        "intype": "down",
-        "debounce": "25",
-        "read": false,
-        "bcm": true,
-        "x": 120,
-        "y": 100,
-        "wires": [
-            [
-                "1357f5b8874b99a6"
             ]
         ]
     },
@@ -60,8 +42,8 @@
         "strings": true,
         "include_empty_strings": "",
         "include_null_values": "",
-        "x": 140,
-        "y": 580,
+        "x": 300,
+        "y": 500,
         "wires": [
             [
                 "40308bfaa82c4356"
@@ -72,7 +54,7 @@
         "id": "ffcb4f55c843f498",
         "type": "debug",
         "z": "620e0253fa335e5b",
-        "name": "debug 2",
+        "name": "dbg watch",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -81,97 +63,27 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 320,
-        "y": 480,
-        "wires": []
-    },
-    {
-        "id": "ee688ad3263f485b",
-        "type": "delay",
-        "z": "620e0253fa335e5b",
-        "name": "",
-        "pauseType": "rate",
-        "timeout": "5",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": true,
-        "allowrate": true,
-        "outputs": 1,
-        "x": 130,
+        "x": 670,
         "y": 360,
-        "wires": [
-            [
-                "5e49b4a00181cb15"
-            ]
-        ],
-        "info": "This is here because a button press sends 2\nsignals/messages.\n\nThis node let's us ignore one of them so the\nrest of the flow carries on with 1 message."
-    },
-    {
-        "id": "5e49b4a00181cb15",
-        "type": "delay",
-        "z": "620e0253fa335e5b",
-        "name": "",
-        "pauseType": "delay",
-        "timeout": "1",
-        "timeoutUnits": "seconds",
-        "rate": "1",
-        "nbRateUnits": "1",
-        "rateUnits": "second",
-        "randomFirst": "1",
-        "randomLast": "5",
-        "randomUnits": "seconds",
-        "drop": false,
-        "allowrate": false,
-        "outputs": 1,
-        "x": 120,
-        "y": 420,
-        "wires": [
-            [
-                "3a096c66f275b647"
-            ]
-        ]
-    },
-    {
-        "id": "1357f5b8874b99a6",
-        "type": "function",
-        "z": "620e0253fa335e5b",
-        "name": "skip first button press",
-        "func": "// inititalize counter to 0 if it doesn't exist already\nvar button_count = context.get('button_count')||0;\n//if (msg.payload == 1 || msg.payload == 0) {\nbutton_count += 1;\n//}\n// save value of count for rest of program\ncontext.set('button_count',button_count)\n// make it a part of the outgoing message object\nmsg.button_count = button_count;\nmsg.payload = button_count;\nif (button_count > 2){\n    return msg;\n}",
-        "outputs": 1,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 140,
-        "y": 220,
-        "wires": [
-            [
-                "ee688ad3263f485b"
-            ]
-        ]
+        "wires": []
     },
     {
         "id": "40308bfaa82c4356",
         "type": "function",
         "z": "620e0253fa335e5b",
-        "name": "parse for chart",
-        "func": "var payload = msg.payload;\nvar series = []\nvar data=[];\n\nfor(let i=0;i<payload.length;i++)\n{\n    series.push(payload[i][\"ID\"])\n    data.push([payload[i][\"Time\"]])\n}\n\n\nmsg.payload=[{\n    \"series\": series,\n    \"data\": data,\n    \"labels\": [\"Time as Master\"]\n}];\nreturn msg;\n",
+        "name": "parse for Bar chart",
+        "func": "var payload = msg.payload;\nvar series = []\nvar data=[];\n\n// Run through the Raw Data lines in the log file\n// to get the IDs and total Times\nfor(let i=0;i<payload.length;i++)\n{\n    series.push(payload[i][\"ID\"])\n    data.push([payload[i][\"Time\"]])\n}\n\nmsg.payload=[{\n    \"series\": series,\n    \"data\": data,\n    \"labels\": [\"Time as Master\"]\n}];\nreturn msg;\n",
         "outputs": 1,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 160,
-        "y": 680,
+        "x": 430,
+        "y": 560,
         "wires": [
             [
                 "e395cd0ba6f9e0e9",
-                "ffcb4f55c843f498"
+                "fc64e88f7a32954b"
             ]
         ]
     },
@@ -213,16 +125,174 @@
         "outputs": 1,
         "useDifferentColor": false,
         "className": "",
-        "x": 240,
-        "y": 800,
+        "x": 600,
+        "y": 660,
         "wires": [
             []
         ]
     },
     {
+        "id": "44cccc4b9277bf43",
+        "type": "watch",
+        "z": "620e0253fa335e5b",
+        "name": "",
+        "files": "/home/pi/mu_code/",
+        "recursive": "",
+        "x": 150,
+        "y": 360,
+        "wires": [
+            [
+                "ffcb4f55c843f498",
+                "3a096c66f275b647",
+                "59091129134420d3"
+            ]
+        ]
+    },
+    {
+        "id": "59091129134420d3",
+        "type": "file in",
+        "z": "620e0253fa335e5b",
+        "name": "read Trace chart file",
+        "filename": "$split(msg.file,\"_\")[0] = \"graph\" ? msg.payload : null",
+        "filenameType": "jsonata",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 270,
+        "y": 300,
+        "wires": [
+            [
+                "47495878e4551d05"
+            ]
+        ]
+    },
+    {
+        "id": "07e57ef92d8b161d",
+        "type": "debug",
+        "z": "620e0253fa335e5b",
+        "name": "dbg Trace",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "47495878e4551d05",
+        "type": "csv",
+        "z": "620e0253fa335e5b",
+        "name": "CSV to json Trace Graph",
+        "sep": ",",
+        "hdrin": true,
+        "hdrout": "none",
+        "multi": "mult",
+        "ret": "\\n",
+        "temp": "",
+        "skip": "0",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 290,
+        "y": 220,
+        "wires": [
+            [
+                "b8adc0066c3e3b83"
+            ]
+        ]
+    },
+    {
+        "id": "3ad1e37a5cbf5cec",
+        "type": "ui_chart",
+        "z": "620e0253fa335e5b",
+        "name": "",
+        "group": "dd0b9e80a464f19e",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "label": "Trace Chart",
+        "chartType": "line",
+        "legend": "true",
+        "xformat": "",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": "30",
+        "removeOlderPoints": "30",
+        "removeOlderUnit": "1",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 610,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b8adc0066c3e3b83",
+        "type": "function",
+        "z": "620e0253fa335e5b",
+        "name": "parse for Trace chart",
+        "func": "var payload = msg.payload;\nvar repeatedIDs = []\nvar series = []\nvar data=[];\n\n// Loop to get an array that ONLY contains valid entries\nfor(let i = 0; i < payload.length; i++) {\n    if (payload[i][\"ID\"] != \"None\"){\n        repeatedIDs.push(payload[i][\"ID\"])\n    }\n}\n\n// Get the number of unique IDs that were Masters\nvar num_of_Masters = new Set(repeatedIDs).size;\n//node.warn(num_of_Masters);\n\n// Set the size for the \nfor (let i = 0; i < num_of_Masters; i++) {\n    series.push(0)\n    data.push([])\n}\n\n// Get IDs from payload to get all the series \nfor (let i = 0; i < payload.length; i++) {\n    for (let j = 0; j < series.length; j++) {\n        if (series[j] == payload[i][\"ID\"]){\n            break\n        } else if(series[j] == 0 && payload[i][\"ID\"] != \"None\"){\n            series[j] = payload[i][\"ID\"]  \n            break    \n        }\n    }\n}\n\n// Building an array per ID. So outer loop goes through all\n// 30 points, inner loop goes through series, checks the\n// data point's ID and inserts it in the corresponding array.\n// Unless there's an invalid entry, in which case it enters\n// an \"empty\" point in the first Master's array so that the\n// graph begins from right to left. Showing the most recent\n// value at the right end of the graph.\nfor(let i=0;i<payload.length;i++)\n{\n    for (let j = 0; j < series.length; j++) {\n        if (series[j] == payload[i][\"ID\"]){\n            data[j].push({ \"x\": payload[i][\"X\"], \"y\": payload[i][\"Y\"]})\n            break\n        }\n        else if (payload[i][\"ID\"] == \"None\") {  // invalid data (graphed before 30 seconds had passed)\n            // introduce null values\n            data[j].push({\"x\": i+1, \"y\": null}) // adding + 1 so i matches used x coors\n            break\n        }\n    }\n}\n\nmsg.payload=[{\n    \"series\": series,\n    \"data\": data,\n    \"labels\": [\"Last 30 seconds\"]\n}];\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 140,
+        "wires": [
+            [
+                "3ad1e37a5cbf5cec",
+                "07e57ef92d8b161d"
+            ]
+        ]
+    },
+    {
+        "id": "fc64e88f7a32954b",
+        "type": "debug",
+        "z": "620e0253fa335e5b",
+        "name": "dbg Bar",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 560,
+        "wires": []
+    },
+    {
         "id": "dd0b9e80a464f19e",
         "type": "ui_group",
-        "name": "Charts",
+        "name": "Trace Chart",
         "tab": "dd824878cc0a8d12",
         "order": 1,
         "disp": false,
@@ -233,7 +303,7 @@
     {
         "id": "dd824878cc0a8d12",
         "type": "ui_tab",
-        "name": "Bar Chart",
+        "name": "Lab 5 Charts",
         "icon": "dashboard",
         "disabled": false,
         "hidden": false
