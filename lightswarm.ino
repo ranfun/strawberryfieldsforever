@@ -64,6 +64,9 @@ WiFiUDP udp;
 
 IPAddress localIP;
 
+int ledPins[] = { 16,5,4,0,3,14,12,13,15,1}; //Bins defined for led bar
+const int ledCount = 10;
+
 void setup()
 {
   Serial.begin(9600);
@@ -72,7 +75,11 @@ void setup()
 
   //Pin setup for on-board LEDs  
   pinMode (Master_LED, OUTPUT);
-  pinMode (Blink_LED, OUTPUT);  
+  pinMode (Blink_LED, OUTPUT); 
+  // bar led
+  for (int thisLed = 0; thisLed < ledCount; thisLed++) {
+    pinMode(ledPins[thisLed], OUTPUT);
+  }
 
 
   Serial.println("");
@@ -173,6 +180,17 @@ void loop()
   Serial.println(LDR_Reading);
   swarmClear[mySwarmID] = LDR;
 
+  //Bar LED
+  int ledLevel = map(clearColor, 0, 1023, 0, ledCount);
+  for (int thisLed = 0; thisLed < ledCount; thisLed++) {
+    if (thisLed < ledLevel) {
+      digitalWrite(ledPins[thisLed], HIGH);
+    }
+  else {
+      digitalWrite(ledPins[thisLed], LOW);
+   }
+  }
+  
   pwm_r=map(LDR,0,999,0,255);
   analogWrite(Blink_LED,pwm_r);
 
