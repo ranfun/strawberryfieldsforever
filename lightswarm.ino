@@ -181,7 +181,7 @@ void loop()
   swarmClear[mySwarmID] = LDR;
 
   //Bar LED
-  int ledLevel = map(clearColor, 0, 1023, 0, ledCount);
+  int ledLevel = map(LDR_Reading, 0, 1023, 0, ledCount);
   for (int thisLed = 0; thisLed < ledCount; thisLed++) {
     if (thisLed < ledLevel) {
       digitalWrite(ledPins[thisLed], HIGH);
