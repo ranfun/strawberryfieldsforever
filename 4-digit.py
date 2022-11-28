@@ -12,14 +12,12 @@
 # 11 8 A
 # 12 16 1
 
-import sys, os
 import RPi.GPIO as GPIO
 import time
-import random
-#fpid = os.fork()
-#if fpid!=0:
 
-to_display = '0000' #master ip goes here
+nums=69 #input ip address here
+s1 = f'{nums:04d}'
+to_display = str(s1)
 
 GPIO.setmode (GPIO.BCM)
 GPIO.setwarnings(False)
@@ -51,28 +49,28 @@ arrSeg = [[0,0,0,0,0,0,1],\
 [0,0,0,0,1,0,0]]
 
 def split_num(to_display): # splits the given number string
-# Splits variable 'to_display' string to a list of elements,
+# “”” Splits variable ‘to_display’ string to a list of elements,
 # so that each element is a simple str number or space, and set strains to number
 # of digits given
-# 
+# “””
     arrToDisplay = list(to_display)
     if "," in arrToDisplay:
         arrToDisplay[arrToDisplay.index(',')] = ','
-# index "," inlist and replace with "."
+# index “,” inlist and replace with “.”
     if len(arrToDisplay) > 5:
         raise ValueError('Given Number is out of the range of display!')
 # raise error if given number is more that for digits
     return arrToDisplay
 
 def show_display(num): # num represents any number that splitTodisplay cleans up
-# this function basically activates digits and the corresponding display
-# segements according to the variable(num), and removes '.' from the variable
+# “”” this function basically activates digits and the corresponding display
+# segements according to the variable(num), and removes ‘.’ from the variable
 # if it finds one
-# 
+# “””
 # handling floating numbers
     if len(num) > 4:
         for i in range(0,4):
-            new_num = [x for x in num if x!='.'] # if '.' in num, replaces '.' with "
+            new_num = [x for x in num if x!='.'] # if ‘.’ in num, replaces ‘.’ with ”
             sel_digit = [[1, 0, 0, 0],\
             [0, 1, 0, 0],\
             [0, 0, 1, 0],\
