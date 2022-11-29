@@ -76,10 +76,10 @@ void setup()
   //Pin setup for on-board LEDs  
   pinMode (Master_LED, OUTPUT);
   pinMode (Blink_LED, OUTPUT); 
-  // bar led
+
   for (int thisLed = 0; thisLed < ledCount; thisLed++) {
     pinMode(ledPins[thisLed], OUTPUT);
-  }
+  } 
 
 
   Serial.println("");
@@ -175,12 +175,13 @@ void loop()
 
   secondsCount = millis() / 100;
   LDR_Reading = analogRead(LDR_PIN);
-  LDR=map(LDR_Reading,0,1024,100,999);
   Serial.print("LDR reading = ");
   Serial.println(LDR_Reading);
-  swarmClear[mySwarmID] = LDR;
+  swarmClear[mySwarmID] = LDR_Reading;
 
-  //Bar LED
+  pwm_r=map(LDR_Reading,0,1023,0,255);
+  analogWrite(Blink_LED,pwm_r);
+
   int ledLevel = map(LDR_Reading, 0, 1023, 0, ledCount);
   for (int thisLed = 0; thisLed < ledCount; thisLed++) {
     if (thisLed < ledLevel) {
@@ -190,9 +191,6 @@ void loop()
       digitalWrite(ledPins[thisLed], LOW);
    }
   }
-  
-  pwm_r=map(LDR,0,999,0,255);
-  analogWrite(Blink_LED,pwm_r);
 
   // wait to see if a reply is available
   delay(300);
