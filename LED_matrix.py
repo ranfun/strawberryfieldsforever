@@ -7,6 +7,12 @@ rowDataPin = 21
 latchPIN = 14
 clockPIN = 15
 
+def shift_update_matrix(input_Col,Column_PIN,input_Row,Row_PIN,clock,latch):
+  GPIO.output(clock,0)
+  GPIO.output(latch,0)
+  GPIO.output(clock,1)
+
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setup((columnDataPin,rowDataPin,latchPIN,clockPIN),GPIO.OUT)
 
