@@ -3,10 +3,10 @@
     SwitchDoc Labs
 '''
 ''' Lab 4 by Octavio Camacho Barragan
-    This program is limited to work with up to 5 Swarm members due to the lab
+    This program is limited to work with up to 6 Swarm members due to the lab
     requirement of showing a unique color in the graphs for each Swarm Member
 '''
-#Thomas: LED Matrix
+
 import sys
 import time
 import random
@@ -17,10 +17,8 @@ from socket import *
 from gpiozero import LED, Button
 import RPi.GPIO as GPIO
 from threading import Thread, Lock
-from copy import copy, deepcopy
 from datetime import datetime
 import logging
-import matplotlib.pyplot as plt
 
 
 VERSIONNUMBER = 6
@@ -36,8 +34,8 @@ BLINK_BRIGHT_LED = 7
 # Maybe implement reset message here
 
 
-MYPORT = 21135
-SWARMSIZE = 5
+MYPORT = 6969
+SWARMSIZE = 7
 
 logString = ""
 # command from RasPiConnect Execution Code
@@ -52,6 +50,12 @@ DATA_PNTS = 30  # 30 points for 30 seconds of graph info since we graph once a s
 # Hardware Variables
 button_gpio = 2     # Button connection is set at GPIO 2
 yellowPin = 17      # Pins for LEDs
+# LED Matrix pins & variables
+columnDataPin = 20
+rowDataPin = 21
+latchPIN = 14
+clockPIN = 15
+RowSelect = []
 
 # Placeholders Variables initialized due to threads starting alongside prgram initialization
 swarmID = -1
@@ -85,6 +89,8 @@ GPIO.setwarnings(False)
 # Set pins as outputs
 GPIO.setup(yellowPin,GPIO.OUT)
 GPIO.setup(button_gpio, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup((columnDataPin,rowDataPin,latchPIN,clockPIN),GPIO.OUT)
+
 
 ##################### Defining Functions  ###################
 def completeCommand():
@@ -388,9 +394,6 @@ def pValFromLog(message):      # function used only with Masters sending a log!!
         logString = logString + chr( message[i+5] ) # when you skip 5 you start looking into the part of the message where the ESP saved a log string
     print("logString:", logString)
 
-    #print("i: ", i)
-    #print("message type is: ", type(message))
-
     swarmList = logString.split("|")    # this split gives a list of information from each swarm member
     i = 0                               # sender will always be the first one in its log, so i = 0
     swarmElement = swarmList[i].split(",")  # this splits into a list the info logged for first swarm member (current Master)
@@ -420,9 +423,6 @@ def saveLog():
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
-    # Configuring logging for 'matplotlib' module so it doesn't mess with the file logger
-    logging.getLogger("matplotlib").setLevel(logging.WARNING)
-
     # Create and configure logger (using seconds also), otherwise
     # a button press within the same minute overwrites previous file
     # created within the same minute
@@ -438,25 +438,58 @@ def saveLog():
         if (masters_Info[i][0] != 0):  # ID is non-zero, so get ID and time per Master
             # Build the strings to be logged
             string1 = string1 + '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) + ', '
-            string2 = string2 + 'For ' + '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) + ' time was: ' + str(masters_Info[i][1]) + '|'
+            string2 = string2 + '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) + ' time was: ' + str(masters_Info[i][1]) + '|'
             strPvals = [str(x) for x in masters_Info[i][2]]
-            string3 = string3 + '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) + ',' + ','.join(strPvals) + '|'''
+            string3 = string3 + '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) + ',' + str(masters_Info[i][1]) + ','+ ','.join(strPvals) + '|'''
 
     # Log to file the IP addresses of Masters
-    logger.info(string1.rstrip(", "))
+    logger.info(string1.rstrip(", "))   # remove the extra commas and spaces at the end
 
-    # Log to file the total times as Master of Masters
+    # Prepare string for logging to file
     string_list = string2.split("|")     # Get each time string in a list
+    string2 = 'For '
     for i in range(len(string_list)):
-        logger.info(string_list[i])      # Log each element in the list
+        string2 = string2 + string_list[i] + ', for '
+    # Log to file the total times as Master of Masters
+    logger.info(string2.rstrip(",for ")+'\n')   # remove the extra commas and spaces at the end
 
     # Log to file the photo-resistor values of Masters
     logger.info("Raw Data:")
+    logger.info("ID,Time") # Writing out the header of the columns for the CSV Bar graph file
     string_list = string3.split("|")     # Get each pValue string in a list
     for i in range(len(string_list)):
         logger.info(string_list[i])      # Log each element in the list
 
+    ''' Create the CSV file for the Trace graph '''
+    logname = "graph_last30seconds"
 
+    #Clearing out logging handlers so a different new file is logged to
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    # Create and configure logger
+    logging.basicConfig(filename=logname, format='%(message)s', filemode='w', level=logging.DEBUG)
+
+    # Setting new logging config to log into the Trace graph file
+    logger = logging.getLogger()
+
+    ''' Carry out the logging of the Trace graph CSV file'''
+    string1 = ''    # Reset string to be used
+    logger.info("ID,X,Y")   # Writing out the header of the columns for the CSV Trace graph file
+    # Build string for the CSV and save it to the file
+    for i in range(0,len(graph_info)):
+        # Build the strings to be logged
+        if(graph_info[i][0] == None):
+            string1 = string1 + 'None,None,None' + '|'
+        else:
+            string1 = string1 + '.'.join(myIP[0:3]) + '.' + str(graph_info[i][0]) + ',' + str(i+1) + ',' + str(graph_info[i][1]) + '|'
+
+    # Log to CSV file the lines of values
+    string_list = string1.split("|")     # Get each CSV string line in a list
+    for i in range(len(string_list)):
+        logger.info(string_list[i])      # Log each line into the CSV file
+
+    print("MAsters: ", masters_Info)
     # Reset Lists and other variables
     # As a new log file will begin next time this function is called
     # So the history of Masters stored in masters_Info must be reset
@@ -488,31 +521,10 @@ def blink_LED():
                 ledState = False                                        # This if block is only entered when the button is pressed
                 GPIO.output(yellowPin, ledState)                           # If 3 seconds have passed, turn off LED
 
-# Function in thread to save info into databases used for logging and graphing
-def save_graph():
-    global logString
-    global masters_Info
-    global previousGraphTime
-    global run_assitant
-    global message
-    global current_Master_time
-    global pVal
-    global graph_swarmID
-
-    while (True):
-        if (run_assitant):
-            ''' Display graph '''
-            # Grapgh the 2 plots
-            #time_pre_graph = time.perf_counter()
-            graph(graph_swarmID, pVal)
-            #time_post_graph = time.perf_counter()
-            #print("Time graphing:", (time_post_graph - time_pre_graph) )
-            run_assitant = False
 
 # Saves to the database which swarm members have become Masters since last button press
 def setAndReturnMastersIndexAndID(ID):
     global masters_Info
-
     # If previously Master, continue, otherwise add as new Master
     for i in range(0,SWARMSIZE):
         if (masters_Info[i][0] == ID):
@@ -550,100 +562,97 @@ def new_master(new_Master):     # a member index in the masters_Info array
         old_Master = new_Master     # change old_Master
         return True
 
-
-# Builds and displays the graphs, one Bar Chart, and one Trace Chart
-def graph(swarmID, pVal):
-    ''' MISSING DETAIL ABOUT BAR GRAPH ONLY SHOWING LAST 30 SECONDS!!!!'''
-    global myIP
-    global masters_Info
-    global graph_info
-    num_of_Masters = 0
-    IDs_list = []           # List where the full IP address of members will be stored
-    times_list = []         # List where the total time of the current run is stored
-
-    ''' THIS LIMITS PROGRAM FUNCTIONALITY TO 5 ESPs '''
-    list_of_colors = ['red', 'green', 'blue', 'yellow', 'black']
-
-    ''' Get graph info '''
-    # Get x-coordinates, heights of bars (time) and labes for bars
-    for i in range(0,SWARMSIZE):
-        if (masters_Info[i][0] != 0):  # ID is non-zero, so count masters and save their IDs to a list
-            num_of_Masters = num_of_Masters + 1
-            # y-coordinates/heights of bars (time)
-            times_list.append(masters_Info[i][1])
-            # labels for bars
-            IDs_list.append( '.'.join(myIP[0:3]) + '.' + str(masters_Info[i][0]) )
-
-    #print("swarmID: ", swarmID)
-    #print("pVal in graph: ", pVal)
-    #print("graph_info: ", graph_info)
-    #print("# of masters: ", num_of_Masters)
-    #print("masters_Info: ", masters_Info)
-
-    # Populate graph_info in reverse order, from the end to the beginning
-    graph_info.pop(0)      # pop element at leftmost of list (oldest element)
-    graph_info.append([ swarmID, pVal ])    # Append info received at the end of the list
+def save_graph():
+    global previousGraphTime
+    global run_assitant
+    global pVal
+    global graph_swarmID
+    global nums
 
 
-    # bar graph x-coordinates
-    x_bar_coors = list(range(1, num_of_Masters + 1, +1))    # i.e. with 3 ESPs the result is: [1,2,3]
+    background=[["00000000"],["00000000"],["00000000"],["00000000"],["00000000"],["00000000"],["00000000"],["00000000"]]
+    ledmatrix_count = 0
+    sum_value_led_matrix = 0
 
-    # trace graph x-coordinates
-    x_trace_coors = list(range(31))
-    x_trace_coors.pop(0)    # pop first element since X axis ends at 1 and begins at 30
-    x_trace_coors.reverse() # The above comment explains why the list is reversed
+    while(True):
+        if(run_assitant):
+            for x in range(8):
+                RowSelect=[0,1,1,1,1,1,1,1]
+                for i in range(0,8):
+                    shift_update_matrix(''.join(map(str, RowSelect)),columnDataPin,''.join(map(str, background[i])),rowDataPin,clockPIN,latchPIN)
+                    RowSelect = RowSelect[-1:] + RowSelect[:-1]
+            
+            currentTime = time.perf_counter()       # Save current time to compare it to time of last graph
+            # At first this if is always entered because previousGraphTime starts at 0
+            if (currentTime - previousGraphTime) >= graphTimeInterval: # if graphTimeInterval seconds have passed since last graph
+                #print("Graph every:", currentTime - previousGraphTime)
+                previousGraphTime = currentTime     # Save last time a graph was drawn
+
+                # Save to the variable for the 4 digits display
+                nums=graph_swarmID #input ip address here
+                s1 = f'{nums:04d}'  # converting nums
+                to_display = str(s1) # further converting nums
+                # Displaying on the 4 digits segment
+                show_display(split_num(to_display))
+
+                # Populate graph_info in reverse order, from the end to the beginning
+                graph_info.pop(0)      # pop element at leftmost of list (oldest element)
+                graph_info.append([ graph_swarmID, pVal ])    # Append info received at the end of the list
+
+                sum_value_led_matrix = pVal + sum_value_led_matrix	# value_data[log_count] is the light value
+                ledmatrix_count = ledmatrix_count + 1
+                if ledmatrix_count == 4: 						# update led matrix every 4 seconds
+                    #print("I'm in the Matrix!")
+                    average_value_led_matrix = sum_value_led_matrix / 4
+                    ledmatrix_count = 0
+                    sum_value_led_matrix = 0
+                    if average_value_led_matrix < 129:
+                        tmp = "00000001"
+                    if 128 < average_value_led_matrix and average_value_led_matrix < 257:
+                        tmp = "00000010"
+                    if 256 < average_value_led_matrix and average_value_led_matrix < 385:
+                        tmp = "00000100"
+                    if 384 < average_value_led_matrix and average_value_led_matrix < 513:
+                        tmp = "00001000"
+                    if 512 < average_value_led_matrix and average_value_led_matrix < 641:
+                        tmp = "00010000"
+                    if 640 < average_value_led_matrix and average_value_led_matrix < 769:
+                        tmp = "00100000"
+                    if 768 < average_value_led_matrix and average_value_led_matrix < 897:
+                        tmp = "01000000"
+                    if 896 < average_value_led_matrix:
+                        tmp = "10000000"
+                    background.insert(0,tmp)
+                    background.pop(8)
+
+                run_assitant = False
 
 
-    # Placing graphs in window
-    plt_bar = plt.subplot2grid( (6,6), (0,0), rowspan=2, colspan=4 )
-    plt_trace = plt.subplot2grid( (6,6), (3,0), rowspan=4, colspan=6 )
+def shift_update_matrix(input_Col,Column_PIN,input_Row,Row_PIN,clock,latch):
+  GPIO.output(clock,0)
+  GPIO.output(latch,0)
+  GPIO.output(clock,1)
 
+  for i in range(7, -1, -1):
+    GPIO.output(clock,0)
+    GPIO.output(Column_PIN, int(input_Col[i]))
+    GPIO.output(Row_PIN, int(input_Row[i]))
+    GPIO.output(clock,1)
 
-    # Name the bar graph axes and title
-    plt_bar.set_xlabel('Swarm Member')
-    plt_bar.set_ylabel('Time')
-    plt_bar.set_title('Time as Master')
-
-    # Name the trace graph axes and title
-    plt_trace.set_xlabel('Number of seconds ago')
-    plt_trace.set_ylabel('Photo-resistor Value')
-    plt_trace.set_title('Sensor Readings')
-    
-    # Plot bar chart
-    plt_bar.bar(x_bar_coors, times_list, tick_label = IDs_list, width = 0.8, color = list_of_colors[0:num_of_Masters])
-
-
-    # Plotting a trace chart
-    y_trace_coors = []
-    for i,j in list( enumerate(graph_info)):
-        y_trace_coors.append(graph_info[i][1])
-    # Plot 29 lines (number of lines between all 30 data points)
-    for i,j in list( enumerate(graph_info)):
-        if i < (DATA_PNTS - 1):           # i goes from 0 to 29 for the 30 elements in graph_info
-            for k in range(0, num_of_Masters):              # 'k' gets a index value that corresponds to an element index in the database masters_Info
-                if graph_info[i][0] == masters_Info[k][0]:  # Check 'k' is the masters_Info element that matches the swarmID of the graph_info data point to be graphed
-                    plt_trace.plot( [ x_trace_coors[i], x_trace_coors[i+1] ], [ y_trace_coors[i], y_trace_coors[i+1] ], color = list_of_colors[k] )
-
-
-    # This so the Trace graph is set at the range between 30 and 1 secs ago
-    plt_trace.set_xlim([DATA_PNTS,1])
-
-    # Pack the plots and display them
-    plt.tight_layout()
-    plt.draw()
-    plt.pause(0.001)
-
+  GPIO.output(clock,0)
+  GPIO.output(latch,1)
+  GPIO.output(clock,1)
 
 
 # Thread for having the LED be on for 3 seconds after a button press
 thread1 = Thread(target=blink_LED)
 thread1.start()
-# Thread for having the info for graph and log saved without slowing down the reading of UDP messages
+# Thread to properly save info for graphing every second
 thread2 = Thread(target=save_graph)
 thread2.start()
 
+turnLEDsOff()   # Turn off LEDs before program begins
 
-turnLEDsOff()
 
 def button_pressed_callback(channel):
     global start_logging
@@ -659,7 +668,6 @@ def button_pressed_callback(channel):
         #time_post_svlg = time.perf_counter()
         #print("Time logging:", (time_post_svlg - time_pre_svlg) )
 
-
     print("Button pressed!")
     start_logging = True
     turnLEDsOff()
@@ -673,6 +681,83 @@ GPIO.add_event_detect(button_gpio, GPIO.FALLING, callback=button_pressed_callbac
 # Bouncetime ensures callback is triggered once in 1 seconds
 # The reason for 1 second is because the file names hold the time. Meaning that
 # allowing for logging more than once a second erases the previous log
+
+# 4 digit segment variables
+display_list = [8,24,6,19,26,23,5] #
+# display list ref: A, B, C, D, E, F, G
+for pin in display_list:
+    GPIO.setup(pin,GPIO.OUT) # set pins for each segement
+
+# digits 1, 2, 3,4
+set_digit = [16,12,18,9]
+for digit in set_digit:
+    GPIO.setup(digit,GPIO.OUT) # set pins for digit selector
+
+digit_dot = 13
+# dot GPIO port
+GPIO.setup(digit_dot, GPIO.OUT)
+
+# A, B, C, D,E,F,G
+arrSeg = [[0,0,0,0,0,0,1],\
+[1,0,0,1,1,1,1],\
+[0,0,1,0,0,1,0],\
+[0,0,0,0,1,1,0],\
+[1,0,0,1,1,0,0],\
+[0,1,0,0,1,0,0],\
+[0,1,0,0,0,0,0],\
+[0,0,0,1,1,1,1],\
+[0,0,0,0,0,0,0],\
+[0,0,0,0,1,0,0]]
+
+######### Functions for 4 digit display #########
+''' 1st function '''
+def split_num(to_display): # splits the given number string
+# “”” Splits variable ‘to_display’ string to a list of elements,
+# so that each element is a simple str number or space, and set strains to number
+# of digits given
+# “””
+    arrToDisplay = list(to_display)
+    if "," in arrToDisplay:
+        arrToDisplay[arrToDisplay.index(',')] = ','
+# index “,” inlist and replace with “.”
+    if len(arrToDisplay) > 5:
+        raise ValueError('Given Number is out of the range of display!')
+# raise error if given number is more that for digits
+    return arrToDisplay
+
+''' 2nd function '''
+def show_display(num): # num represents any number that splitTodisplay cleans up
+# “”” this function basically activates digits and the corresponding display
+# segements according to the variable(num), and removes ‘.’ from the variable
+# if it finds one
+# “””
+# handling floating numbers
+    if len(num) > 4:
+        for i in range(0,4):
+            new_num = [x for x in num if x!='.'] # if ‘.’ in num, replaces ‘.’ with ”
+            sel_digit = [[1, 0, 0, 0],\
+            [0, 1, 0, 0],\
+            [0, 0, 1, 0],\
+            [0, 0, 0, 1]]
+
+        GPIO.output(set_digit,sel_digit[i])
+        GPIO.output(display_list,arrSeg[int(new_num[i])])
+        # activate decimal digit
+        if num[i+1] == '.':
+            GPIO.output(digit_dot,0)
+        else:
+            GPIO.output(digit_dot,1)
+            time.sleep(.0001)
+# integer number
+    else:
+        for i in range(0,4):
+            sel_digit = [[1, 0, 0, 0],\
+            [0, 1, 0, 0],\
+            [0, 0, 1, 0],\
+            [0, 0, 0, 1]]
+            GPIO.output(set_digit,sel_digit[i])
+            GPIO.output(display_list,arrSeg[int(num[i])])
+            time.sleep(.0001)
 
 
 ############## Main Program Loop ##########
@@ -733,7 +818,7 @@ while(True):
                     print("ls["+str(i)+"]="+format(ord(message[i]), "#04x"))
         else:
             if (message[1] == LOG_TO_SERVER_PACKET):#<--- removed ord() surrounding message[1], since recvfrom() returns bytes, not strings in Python 3
-                print("Swarm LOG_TO_SERVER_PACKET Received")
+                #print("Swarm LOG_TO_SERVER_PACKET Received")
                 # process the Log Packet
                 #logString = parseLogPacket(message)
                 #buildWebMapToFile(logString, SWARMSIZE )
@@ -741,10 +826,10 @@ while(True):
                 '''Save info for log '''
                 # acquire info from message to get values into log database
                 index, graph_swarmID = setAndReturnMastersIndexAndID(message[2]) # Save Master's ID info to database if it is new and store its index
-                #time_pre_ext = time.perf_counter()
                 pVal = pValFromLog(message)             # Get the sensor value from log string
-                #time_post_ext = time.perf_counter()
-                #print("Time extracting:", (time_post_ext - time_pre_ext) )
+
+
+
 
                 # Saving pVal for log
                 masters_Info[index][2].append(pVal)   # Append the value to the values list of the respective Master
@@ -752,19 +837,11 @@ while(True):
                 if (new_master(index)):  #<-- did master change?
                     current_Master_time = time.perf_counter() # get start time of new master
 
-                currentTime = time.perf_counter()       # Save current time to compare it to time of last graph
-                # At first this if is always entered since previousGraphTime starts at 0
-                if (currentTime - previousGraphTime) >= graphTimeInterval: # if graphTimeInterval seconds have passed since last graph
-                    #print("Graph every:", currentTime - previousGraphTime)
-                    previousGraphTime = currentTime     # Save last time a graph was drawn
-                    # Boolean variable for save_graph assitant thread to run and
-                    # get the correct 'logString' and 'message' value every second
-                    run_assitant = True
-                # Without the use of a thread, the graphing of data
-                # makes it so the main program ends up with a backlog of UDP
-                # messages to which it needs to catch up. Making the graph charts
-                # take several seconds to update to the most recent info
-
+                # Boolean variable for save_graph assitant thread to run and
+                # get the correct 'logString' and 'message' value every second
+                run_assitant = True
+                # Without the use of a thread, the collection of graphing data
+                # does not reliably happen every 1 second due to the overhead
             else:
                 print("error message length = ",len(message))
 
