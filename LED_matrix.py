@@ -12,6 +12,16 @@ def shift_update_matrix(input_Col,Column_PIN,input_Row,Row_PIN,clock,latch):
   GPIO.output(latch,0)
   GPIO.output(clock,1)
 
+  for i in range(7, -1, -1):
+    GPIO.output(clock,0)
+    GPIO.output(Column_PIN, int(input_Col[i]))
+    GPIO.output(Row_PIN, int(input_Row[i]))
+    GPIO.output(clock,1)
+
+  GPIO.output(clock,0)
+  GPIO.output(latch,1)
+  GPIO.output(clock,1)
+
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup((columnDataPin,rowDataPin,latchPIN,clockPIN),GPIO.OUT)
