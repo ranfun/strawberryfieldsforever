@@ -9,7 +9,7 @@ clockPIN = 15
 
 def shift_update_matrix(input_Col,Column_PIN,input_Row,Row_PIN,clock,latch):
   GPIO.output(clock,0)
-  GPIO.output(latch,0)
+  GPIO.output(latch,0)	#unlock
   GPIO.output(clock,1)
 
   for i in range(7, -1, -1):
@@ -19,7 +19,7 @@ def shift_update_matrix(input_Col,Column_PIN,input_Row,Row_PIN,clock,latch):
     GPIO.output(clock,1)
 
   GPIO.output(clock,0)
-  GPIO.output(latch,1)
+  GPIO.output(latch,1)	#lock
   GPIO.output(clock,1)
 
 
@@ -59,5 +59,7 @@ while(1):
                 RowSelect=[0,1,1,1,1,1,1,1]
                 for i in range(0,8):
                 	shift_update_matrix(''.join(map(str, RowSelect)),columnDataPin,''.join(map(str, background[i])),rowDataPin,clockPIN,latchPIN)
-                	RowSelect = RowSelect[-1:] + RowSelect[:-1]
+                	RowSelect = RowSelect[-1:] + RowSelect[:-1] 
+			# [:-1] It selects all but the last element of a sequence.
+			# [-1:] It selects all but the first element of a sequence.
 	log_count = log_count + 1
